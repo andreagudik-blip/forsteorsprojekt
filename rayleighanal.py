@@ -69,7 +69,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
     #plotting the histogram and the fitted PDF
     if plotting==True:
         plt.figure(figsize=(8,6))
-        
+
         #cutting off the histogram at the specified percentile to avoid long tails dominating the plot
         upper = np.percentile(speed, percentile)
         plt.hist(speed, bins=bins, range=(0, upper), density=True, alpha=0.5, color='C0', label="Histogram")
@@ -81,4 +81,5 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
         plt.ylabel("PDF")
         plt.title("2 Rayleigh fit")
         plt.show()
+        
     return sigma1, sigma2, weight
