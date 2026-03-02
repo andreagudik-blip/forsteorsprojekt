@@ -71,9 +71,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
     #Extracting the fitted parameters
     sigma1, sigma2, weight = res.x
 
-    sigma1, sigma2, weight = res.x
-
-    Delta_t = 50*10**-3 * sfs
+    Delta_t = 50e-3 * sfs
     D1 = sigma1**2 / (2 * Delta_t)
     D2 = sigma2**2 / (2 * Delta_t)
 
@@ -93,4 +91,4 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
         plt.title("2 Rayleigh fit")
         plt.show()
 
-    return sigma1, sigma2, weight
+    return sigma1, sigma2, weight, D1, D2
