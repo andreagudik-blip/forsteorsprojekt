@@ -14,7 +14,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
     tlike=data[:,18]
 
     #filtering out rows where any likelihood is below the threshold
-    mask = (tlike>minlike) & (srlike>minlike) & (sllike>minlike) & (erlike>minlike) & (ellike>minlike) & (nlike>minlike)
+    mask = (tlike>minlike) & (srlike>minlike) & (sllike>minlike)
 
     slx=data[:,10][mask]
     sly=data[:,11][mask]
@@ -45,7 +45,12 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
     x_blocks = x_trunc.reshape(-1, sfs)
     y_blocks = y_trunc.reshape(-1, sfs)
 
-    speed = np.abs(np.sqrt((x_blocks[:,-1] - x_blocks[:,0])**2 + (y_blocks[:,-1] - y_blocks[:,0])**2))
+    speed = np.abs(np.sqrt((x_blocks[:,-1] - x_blocks[:,0])**2 + (y_blocks[:,-1] - y_blocks[:,0])**2)) 
+    
+    #korrekte enheder
+    fps=20
+    pixel_to_meter=0.01 #midlertidig value
+    speed = speed * pixel_to_meter * (fps/sfs)
 
     #fitting a weighted sum of two Rayleigh distributions to the speed data
     def weighted_rayleigh_pdf(x, sigma1, sigma2, w):
@@ -77,9 +82,9 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
         Y = weighted_rayleigh_pdf(X, sigma1, sigma2, weight)
         plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
         plt.legend()
-        plt.xlabel("Hastighed i arbitrær enhed")
+        plt.xlabel("Fart\n[$m/s$]")
         plt.ylabel("PDF")
         plt.title("2 Rayleigh fit")
         plt.show()
-        
+
     return sigma1, sigma2, weight
