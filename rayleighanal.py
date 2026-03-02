@@ -66,6 +66,12 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
     #Extracting the fitted parameters
     sigma1, sigma2, weight = res.x
 
+    sigma1, sigma2, weight = res.x
+
+    Delta_t = 50*10**-3 * sfs
+    D1 = sigma1**2 / (2 * Delta_t)
+    D2 = sigma2**2 / (2 * Delta_t)
+
     #plotting the histogram and the fitted PDF
     if plotting==True:
         plt.figure(figsize=(8,6))
@@ -77,9 +83,9 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
         Y = weighted_rayleigh_pdf(X, sigma1, sigma2, weight)
         plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
         plt.legend()
-        plt.xlabel("Hastighed i arbitrær enhed")
+        plt.xlabel("Hastighed\n pixels pr "+str(Delta_t)+"$s$")
         plt.ylabel("PDF")
         plt.title("2 Rayleigh fit")
         plt.show()
-        
-    return sigma1, sigma2, weight
+
+    return sigma1, sigma2, weight, D1, D2
