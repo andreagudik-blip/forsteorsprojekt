@@ -49,7 +49,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
     
     #korrekte enheder
     fps=20
-    pixel_to_meter=0.01 #midlertidig value
+    pixel_to_meter=0.001 #midlertidig value
     speed = speed * pixel_to_meter * (fps/sfs)
 
     #fitting a weighted sum of two Rayleigh distributions to the speed data
