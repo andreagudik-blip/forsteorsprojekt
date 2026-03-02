@@ -1,4 +1,4 @@
-def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=True):
+def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCMC",N_MH=100000,q_s=1,burn_in_fraction=1/5,plotting=True):
     #imports
     import matplotlib.pyplot as plt
     import numpy as np
@@ -64,12 +64,46 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
         pdf_vals = weighted_rayleigh_pdf(data, sigma1, sigma2, w)
         return -np.sum(np.log(pdf_vals + 1e-12))
     
-    #Using scipy's minimize function to find the parameters that minimize the negative log-likelihood
-    res = minimize(neg_log_likelihood, x0=p0, args=(speed,),
+
+    def MCMC(data,p0, N_MH, q_s):
+        sigma1, sigma2, w = p0   
+        burn_in = int(N_MH * burn_in_fraction)
+
+        theta_save = np.zeros((N_MH,3))
+        for i in range (N_MH):
+            sigma1_new = np.abs(sigma1 + q_s*np.random.normal())
+            sigma2_new = np.abs(sigma2 + q_s*np.random.normal())
+            w_new = np.clip(w + q_s*np.random.normal(), 0, 1)
+            
+            logP_ratio = np.log(weighted_rayleigh_pdf(data, sigma1_new, sigma2_new, w_new)) - \
+             np.log(weighted_rayleigh_pdf(data, sigma1, sigma2, w))
+            P_accept = np.exp(np.sum(logP_ratio))
+
+            if P_accept >= 1: 
+                sigma1 = sigma1_new
+                sigma2 = sigma2_new
+                w = w_new
+            elif P_accept >= np.random.random():
+                sigma1 = sigma1_new
+                sigma2 = sigma2_new
+                w = w_new
+            theta_save[i,0] = sigma1
+            theta_save[i,1] = sigma2
+            theta_save[i,2] = w
+        posterior_samples = theta_save[burn_in:]
+        return posterior_samples
+
+    if method=="MCMC":
+        posterior_samples = MCMC(speed,p0, N_MH, q_s)
+        sigma1, sigma2, weight = np.mean(posterior_samples, axis=0)
+        sigma1_err, sigma2_err, weight_err = np.std(posterior_samples, axis=0)
+
+    elif method=="MLE":
+        #Using scipy's minimize function to find the parameters that minimize the negative log-likelihood
+        res = minimize(neg_log_likelihood, x0=p0, args=(speed,),
                 bounds=[(1e-6, None),(1e-6, None),(1e-3, 1-1e-3)])
-    
-    #Extracting the fitted parameters
-    sigma1, sigma2, weight = res.x
+        sigma1, sigma2, weight = res.x
+
 
     Delta_t = 50e-3 * sfs
     D1 = sigma1**2 / (2 * Delta_t)
@@ -91,4 +125,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,plotting=Tr
         plt.title("2 Rayleigh fit")
         plt.show()
 
-    return sigma1, sigma2, weight, D1, D2
+    if method=="MCMC":
+        return sigma1, sigma2, weight, D1, D2, sigma1_err, sigma2_err, weight_err
+    elif method=="MLE":
+        return sigma1, sigma2, weight, D1, D2
