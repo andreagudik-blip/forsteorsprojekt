@@ -1,4 +1,4 @@
-def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCMC",N_MH=100000,q_s=1,burn_in_fraction=1/5,plotting=True):
+def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCMC",N_MH=50000,q_s=1,burn_in_fraction=1/5,plotting=True):
     #imports
     import matplotlib.pyplot as plt
     import numpy as np
@@ -49,8 +49,8 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
     
     #korrekte enheder
     fps=20
-    pixel_to_meter=0.001 #midlertidig value
-    speed = speed * pixel_to_meter * (fps/sfs)
+    pixel_to_mm=1 #midlertidig value
+    speed = speed * pixel_to_mm * (fps/sfs)
 
     #fitting a weighted sum of two Rayleigh distributions to the speed data
     def weighted_rayleigh_pdf(x, sigma1, sigma2, w):
@@ -75,8 +75,8 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
             sigma2_new = np.abs(sigma2 + q_s*np.random.normal())
             w_new = np.clip(w + q_s*np.random.normal(), 0, 1)
             
-            logP_ratio = np.log(weighted_rayleigh_pdf(data, sigma1_new, sigma2_new, w_new)) - \
-             np.log(weighted_rayleigh_pdf(data, sigma1, sigma2, w))
+            logP_ratio = np.log(weighted_rayleigh_pdf(data, sigma1_new, sigma2_new, w_new)+ 1e-12) - \
+             np.log(weighted_rayleigh_pdf(data, sigma1, sigma2, w)+ 1e-12)
             P_accept = np.exp(np.sum(logP_ratio))
 
             if P_accept >= 1: 
@@ -101,13 +101,17 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
     elif method=="MLE":
         #Using scipy's minimize function to find the parameters that minimize the negative log-likelihood
         res = minimize(neg_log_likelihood, x0=p0, args=(speed,),
-                bounds=[(1e-6, None),(1e-6, None),(1e-3, 1-1e-3)])
+               bounds=[(0.01, None), (0.01, None), (1e-3, 1-1e-3)])
         sigma1, sigma2, weight = res.x
 
 
     Delta_t = 50e-3 * sfs
     D1 = sigma1**2 / (2 * Delta_t)
     D2 = sigma2**2 / (2 * Delta_t)
+
+    if method=="MCMC":
+        D1_err = (sigma1 / Delta_t) * sigma1_err
+        D2_err = (sigma2 / Delta_t) * sigma2_err    
 
     #plotting the histogram and the fitted PDF
     if plotting==True:
@@ -118,14 +122,17 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
         plt.hist(speed, bins=bins, range=(0, upper), density=True, alpha=0.5, color='C0', label="Histogram")
         X = np.linspace(0, upper, 1000)
         Y = weighted_rayleigh_pdf(X, sigma1, sigma2, weight)
-        plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
+        if method=="MCMC":
+            plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}±{sigma1_err:.2f}, σ2={sigma2:.2f}±{sigma2_err:.2f}, w={weight:.2f}±{weight_err:.2f}")
+        elif method="MLE":
+            plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
         plt.legend()
-        plt.xlabel("Fart\n[$m/s$]")
+        plt.xlabel("Fart\n[$mm/s$]")
         plt.ylabel("PDF")
         plt.title("2 Rayleigh fit")
         plt.show()
-
+    
     if method=="MCMC":
-        return sigma1, sigma2, weight, D1, D2, sigma1_err, sigma2_err, weight_err
+        return [sigma1, sigma2, weight, D1, D2], [sigma1_err, sigma2_err, weight_err,D1_err, D2_err]
     elif method=="MLE":
-        return sigma1, sigma2, weight, D1, D2
+        return [sigma1, sigma2, weight, D1, D2], [None, None, None, None, None]
