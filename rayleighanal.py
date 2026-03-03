@@ -124,7 +124,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
         Y = weighted_rayleigh_pdf(X, sigma1, sigma2, weight)
         if method=="MCMC":
             plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}±{sigma1_err:.2f}, σ2={sigma2:.2f}±{sigma2_err:.2f}, w={weight:.2f}±{weight_err:.2f}")
-        elif method="MLE":
+        elif method=="MLE":
             plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
         plt.legend()
         plt.xlabel("Fart\n[$mm/s$]")
