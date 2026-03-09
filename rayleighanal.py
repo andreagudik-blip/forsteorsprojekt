@@ -133,7 +133,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
         plt.title("2 Rayleigh fit")
         plt.show()
     
-        if method=="MCMC":
+    if method=="MCMC":
             return [sigma1, sigma2, weight, D1, D2], [sigma1_err, sigma2_err, weight_err,D1_err, D2_err]
-        elif method=="MLE":
+    elif method=="MLE":
             return [sigma1, sigma2, weight, D1, D2], [None, None, None, None, None]
