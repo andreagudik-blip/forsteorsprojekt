@@ -188,7 +188,7 @@ def double_rayleigh(path,p0=[7,65,0.5],sfs=20,bins=40,minlike=0.8,percentile=99,
             return [sigma1, sigma2, weight, D1, D2], [None, None, None, None, None]
 
 
-def løbendefit(path,p0,sfs=10,minlike=0.8,windowsize=100,windowstep=10,N_MH=10000,
+def løbendefit(path,p0=[7,65,0.5],sfs=10,minlike=0.8,windowsize=100,windowstep=10,N_MH=10000,
                MHstepsize=[0.5,3,0.02],burn_in_fraction=1/4,plotting=True):
     """
     Fit a mixture of two Rayleigh distributions to speed data.
