@@ -1,138 +1,139 @@
-def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCMC",N_MH=50000,q_s=1,burn_in_fraction=1/5,plotting=True):
-    #imports
-    import matplotlib.pyplot as plt
-    import numpy as np
-    from scipy.optimize import minimize
-    data=np.genfromtxt(path,delimiter=",",skip_header=1)
+    def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCMC",N_MH=50000,stepsize=[0.5,3,0.02],burn_in_fraction=1/5,plotting=True):
+        #imports
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from scipy.optimize import minimize
+        data=np.genfromtxt(path,delimiter=",",skip_header=1)
 
-    #extracting likelihoods and coordinates
-    nlike=data[:,3]
-    ellike=data[:,6]
-    erlike=data[:,9]
-    sllike=data[:,12]
-    srlike=data[:,15]
-    tlike=data[:,18]
+        #extracting likelihoods and coordinates
+        nlike=data[:,3]
+        ellike=data[:,6]
+        erlike=data[:,9]
+        sllike=data[:,12]
+        srlike=data[:,15]
+        tlike=data[:,18]
 
-    #filtering out rows where any likelihood is below the threshold
-    mask = (tlike>minlike) & (srlike>minlike) & (sllike>minlike)
+        #filtering out rows where any likelihood is below the threshold
+        mask = (tlike>minlike) & (srlike>minlike) & (sllike>minlike)
 
-    slx=data[:,10][mask]
-    sly=data[:,11][mask]
-    srx=data[:,13][mask]
-    sry=data[:,14][mask]
-    tx=data[:,16][mask]
-    ty=data[:,17][mask]
+        slx=data[:,10][mask]
+        sly=data[:,11][mask]
+        srx=data[:,13][mask]
+        sry=data[:,14][mask]
+        tx=data[:,16][mask]
+        ty=data[:,17][mask]
 
-    #calculating midpoints
+        #calculating midpoints
 
-    Smidx=slx+(srx-slx)/2
-    Smidy=sly+(sry-sly)/2
-    midx=tx+(Smidx-tx)/2
-    midy=ty+(Smidy-ty)/2
+        Smidx=slx+(srx-slx)/2
+        Smidy=sly+(sry-sly)/2
+        midx=tx+(Smidx-tx)/2
+        midy=ty+(Smidy-ty)/2
 
-    #½truncating to make length divisible by sfs
+        #½truncating to make length divisible by sfs
 
-    n = len(midx) % sfs
-    if n != 0:
-        x_trunc = midx[:-n]
-        y_trunc = midy[:-n]
-    else:
-        x_trunc = midx
-        y_trunc = midy
+        n = len(midx) % sfs
+        if n != 0:
+            x_trunc = midx[:-n]
+            y_trunc = midy[:-n]
+        else:
+            x_trunc = midx
+            y_trunc = midy
 
-    #reshaping into blocks of size sfs and summing to get speed
+        #reshaping into blocks of size sfs and summing to get speed
 
-    x_blocks = x_trunc.reshape(-1, sfs)
-    y_blocks = y_trunc.reshape(-1, sfs)
+        x_blocks = x_trunc.reshape(-1, sfs)
+        y_blocks = y_trunc.reshape(-1, sfs)
 
-    speed = np.abs(np.sqrt((x_blocks[:,-1] - x_blocks[:,0])**2 + (y_blocks[:,-1] - y_blocks[:,0])**2)) 
-    
-    #korrekte enheder
-    fps=20
-    pixel_to_mm=1 #midlertidig value
-    speed = speed * pixel_to_mm * (fps/sfs)
+        speed = np.abs(np.sqrt((x_blocks[:,-1] - x_blocks[:,0])**2 + (y_blocks[:,-1] - y_blocks[:,0])**2)) 
+        
+        #korrekte enheder
+        fps=20
+        pixel_to_mm=1 #midlertidig value
+        speed = speed * pixel_to_mm * (fps/sfs)
 
-    #fitting a weighted sum of two Rayleigh distributions to the speed data
-    def weighted_rayleigh_pdf(x, sigma1, sigma2, w):
-        r1 = (x / sigma1**2) * np.exp(-x**2/(2*sigma1**2))
-        r2 = (x / sigma2**2) * np.exp(-x**2/(2*sigma2**2))
-        return w*r1 + (1-w)*r2
-    
-    #negative log-likelihood function to minimize
-    def neg_log_likelihood(params, data):
-        sigma1, sigma2, w = params
-        pdf_vals = weighted_rayleigh_pdf(data, sigma1, sigma2, w)
-        return -np.sum(np.log(pdf_vals + 1e-12))
-    
+        #fitting a weighted sum of two Rayleigh distributions to the speed data
+        def weighted_rayleigh_pdf(x, sigma1, sigma2, w):
+            r1 = (x / sigma1**2) * np.exp(-x**2/(2*sigma1**2))
+            r2 = (x / sigma2**2) * np.exp(-x**2/(2*sigma2**2))
+            return w*r1 + (1-w)*r2
+        
+        #negative log-likelihood function to minimize
+        def neg_log_likelihood(params, data):
+            sigma1, sigma2, w = params
+            pdf_vals = weighted_rayleigh_pdf(data, sigma1, sigma2, w)
+            return -np.sum(np.log(pdf_vals + 1e-12))
+        
 
-    def MCMC(data,p0, N_MH, q_s):
-        sigma1, sigma2, w = p0   
-        burn_in = int(N_MH * burn_in_fraction)
+        def MCMC(data,p0, N_MH, stepsize):
+            sigma1, sigma2, w = p0   
+            q_s1, q_s2, q_sw = stepsize
+            burn_in = int(N_MH * burn_in_fraction)
 
-        theta_save = np.zeros((N_MH,3))
-        for i in range (N_MH):
-            sigma1_new = np.abs(sigma1 + q_s*np.random.normal())
-            sigma2_new = np.abs(sigma2 + q_s*np.random.normal())
-            w_new = np.clip(w + q_s*np.random.normal(), 0, 1)
-            
-            logP_ratio = np.log(weighted_rayleigh_pdf(data, sigma1_new, sigma2_new, w_new)+ 1e-12) - \
-             np.log(weighted_rayleigh_pdf(data, sigma1, sigma2, w)+ 1e-12)
-            P_accept = np.exp(np.sum(logP_ratio))
+            theta_save = np.zeros((N_MH,3))
+            for i in range (N_MH):
+                sigma1_new = np.abs(sigma1 + q_s1*np.random.normal())
+                sigma2_new = np.abs(sigma2 + q_s2*np.random.normal())
+                w_new = np.clip(w + q_sw*np.random.normal(), 0, 1)
+                
+                logP_ratio = np.log(weighted_rayleigh_pdf(data, sigma1_new, sigma2_new, w_new)+ 1e-12) - \
+                np.log(weighted_rayleigh_pdf(data, sigma1, sigma2, w)+ 1e-12)
+                P_accept = np.exp(np.sum(logP_ratio))
 
-            if P_accept >= 1: 
-                sigma1 = sigma1_new
-                sigma2 = sigma2_new
-                w = w_new
-            elif P_accept >= np.random.random():
-                sigma1 = sigma1_new
-                sigma2 = sigma2_new
-                w = w_new
-            theta_save[i,0] = sigma1
-            theta_save[i,1] = sigma2
-            theta_save[i,2] = w
-        posterior_samples = theta_save[burn_in:]
-        return posterior_samples
+                if P_accept >= 1: 
+                    sigma1 = sigma1_new
+                    sigma2 = sigma2_new
+                    w = w_new
+                elif P_accept >= np.random.random():
+                    sigma1 = sigma1_new
+                    sigma2 = sigma2_new
+                    w = w_new
+                theta_save[i,0] = sigma1
+                theta_save[i,1] = sigma2
+                theta_save[i,2] = w
+            posterior_samples = theta_save[burn_in:]
+            return posterior_samples
 
-    if method=="MCMC":
-        posterior_samples = MCMC(speed,p0, N_MH, q_s)
-        sigma1, sigma2, weight = np.mean(posterior_samples, axis=0)
-        sigma1_err, sigma2_err, weight_err = np.std(posterior_samples, axis=0)
-
-    elif method=="MLE":
-        #Using scipy's minimize function to find the parameters that minimize the negative log-likelihood
-        res = minimize(neg_log_likelihood, x0=p0, args=(speed,),
-               bounds=[(0.01, None), (0.01, None), (1e-3, 1-1e-3)])
-        sigma1, sigma2, weight = res.x
-
-
-    Delta_t = 50e-3 * sfs
-    D1 = sigma1**2 / (2 * Delta_t)
-    D2 = sigma2**2 / (2 * Delta_t)
-
-    if method=="MCMC":
-        D1_err = (sigma1 / Delta_t) * sigma1_err
-        D2_err = (sigma2 / Delta_t) * sigma2_err    
-
-    #plotting the histogram and the fitted PDF
-    if plotting==True:
-        plt.figure(figsize=(8,6))
-
-        #cutting off the histogram at the specified percentile to avoid long tails dominating the plot
-        upper = np.percentile(speed, percentile)
-        plt.hist(speed, bins=bins, range=(0, upper), density=True, alpha=0.5, color='C0', label="Histogram")
-        X = np.linspace(0, upper, 1000)
-        Y = weighted_rayleigh_pdf(X, sigma1, sigma2, weight)
         if method=="MCMC":
-            plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}±{sigma1_err:.2f}, σ2={sigma2:.2f}±{sigma2_err:.2f}, w={weight:.2f}±{weight_err:.2f}")
+            posterior_samples = MCMC(speed,p0, N_MH, q_s)
+            sigma1, sigma2, weight = np.mean(posterior_samples, axis=0)
+            sigma1_err, sigma2_err, weight_err = np.std(posterior_samples, axis=0)
+
         elif method=="MLE":
-            plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
-        plt.legend()
-        plt.xlabel("Fart\n[$mm/s$]")
-        plt.ylabel("PDF")
-        plt.title("2 Rayleigh fit")
-        plt.show()
-    
-    if method=="MCMC":
-        return [sigma1, sigma2, weight, D1, D2], [sigma1_err, sigma2_err, weight_err,D1_err, D2_err]
-    elif method=="MLE":
-        return [sigma1, sigma2, weight, D1, D2], [None, None, None, None, None]
+            #Using scipy's minimize function to find the parameters that minimize the negative log-likelihood
+            res = minimize(neg_log_likelihood, x0=p0, args=(speed,),
+                bounds=[(0.01, None), (0.01, None), (1e-3, 1-1e-3)])
+            sigma1, sigma2, weight = res.x
+
+
+        Delta_t = 50e-3 * sfs
+        D1 = sigma1**2 / (2 * Delta_t)
+        D2 = sigma2**2 / (2 * Delta_t)
+
+        if method=="MCMC":
+            D1_err = (sigma1 / Delta_t) * sigma1_err
+            D2_err = (sigma2 / Delta_t) * sigma2_err    
+
+        #plotting the histogram and the fitted PDF
+        if plotting==True:
+            plt.figure(figsize=(8,6))
+
+            #cutting off the histogram at the specified percentile to avoid long tails dominating the plot
+            upper = np.percentile(speed, percentile)
+            plt.hist(speed, bins=bins, range=(0, upper), density=True, alpha=0.5, color='C0', label="Histogram")
+            X = np.linspace(0, upper, 1000)
+            Y = weighted_rayleigh_pdf(X, sigma1, sigma2, weight)
+            if method=="MCMC":
+                plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}±{sigma1_err:.2f}, σ2={sigma2:.2f}±{sigma2_err:.2f}, w={weight:.2f}±{weight_err:.2f}")
+            elif method=="MLE":
+                plt.plot(X, Y, 'r', lw=2, label=f"Log-likelihood maximized PDF: σ1={sigma1:.2f}, σ2={sigma2:.2f}, w={weight:.2f}")
+            plt.legend()
+            plt.xlabel("Fart\n[$mm/s$]")
+            plt.ylabel("PDF")
+            plt.title("2 Rayleigh fit")
+            plt.show()
+        
+        if method=="MCMC":
+            return [sigma1, sigma2, weight, D1, D2], [sigma1_err, sigma2_err, weight_err,D1_err, D2_err]
+        elif method=="MLE":
+            return [sigma1, sigma2, weight, D1, D2], [None, None, None, None, None]
