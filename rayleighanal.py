@@ -326,20 +326,6 @@ def løbendefit(path,p0=[7,65,0.5],sfs=10,minlike=0.8,windowsize=100,windowstep=
         params_save[i] = [sigma1, sigma2, weight]
         err_save[i] = [sigma1_err, sigma2_err, weight_err]
         p0=[sigma1, sigma2, weight]  # Update p0 for the next window
-
-    if plotting:
-        plt.figure(figsize=(12, 8))
-        plt.subplot(3,1,1)
-        plt.errorbar(range(n_windows), params_save[:,0], yerr=err_save[:,0], fmt='-o')
-        plt.title("Sigma 1 over time")
-        plt.subplot(3,1,2)
-        plt.errorbar(range(n_windows), params_save[:,1], yerr=err_save[:,1], fmt='-o')
-        plt.title("Sigma 2 over time")
-        plt.subplot(3,1,3)
-        plt.errorbar(range(n_windows), params_save[:,2], yerr=err_save[:,2], fmt='-o')
-        plt.title("Weight over time")
-        plt.tight_layout()
-        plt.show()
     sigma1, sigma2, weight = params_save[-1]
     fps=20
     Delta_t = sfs / fps  # seconds per displacement
@@ -348,5 +334,20 @@ def løbendefit(path,p0=[7,65,0.5],sfs=10,minlike=0.8,windowsize=100,windowstep=
     sigma1_err, sigma2_err, weight_err = err_save[-1]
     D1_err = (sigma1 / Delta_t) * sigma1_err
     D2_err = (sigma2 / Delta_t) * sigma2_err
+
+    if plotting:
+        plt.figure(figsize=(12, 8))
+        plt.subplot(3,1,1)
+        plt.errorbar(range(n_windows), D1, yerr=D1_err, fmt='-o')
+        plt.title("D1 over time")
+        plt.subplot(3,1,2)
+        plt.errorbar(range(n_windows), D2, yerr=D2_err, fmt='-o')
+        plt.title("D2 over time")
+        plt.subplot(3,1,3)
+        plt.errorbar(range(n_windows), params_save[:,2], yerr=err_save[:,2], fmt='-o')
+        plt.title("Weight over time")
+        plt.tight_layout()
+        plt.show()
+
     return [sigma1, sigma2, weight, D1, D2], [sigma1_err, sigma2_err, weight_err,D1_err, D2_err]
     
