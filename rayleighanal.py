@@ -95,7 +95,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
         return posterior_samples
 
     if method=="MCMC":
-        posterior_samples = MCMC(speed,p0, N_MH, q_s)
+        posterior_samples = MCMC(speed,p0, N_MH, stepsize)
         sigma1, sigma2, weight = np.mean(posterior_samples, axis=0)
         sigma1_err, sigma2_err, weight_err = np.std(posterior_samples, axis=0)
 
