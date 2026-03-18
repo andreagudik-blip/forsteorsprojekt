@@ -49,8 +49,13 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
     
     #korrekte enheder
     fps=20
+<<<<<<< Updated upstream
     pixel_to_mm=1 #midlertidig value
     speed = speed * pixel_to_mm * (fps/sfs)
+=======
+    pixel_to_meter=0.001 #midlertidig value
+    speed = speed * pixel_to_meter * (fps/sfs)
+>>>>>>> Stashed changes
 
     #fitting a weighted sum of two Rayleigh distributions to the speed data
     def weighted_rayleigh_pdf(x, sigma1, sigma2, w):
@@ -65,6 +70,7 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
         return -np.sum(np.log(pdf_vals + 1e-12))
     
 
+<<<<<<< Updated upstream
     def MCMC(data,p0, N_MH, stepsize):
         sigma1, sigma2, w = p0   
         q_s1, q_s2, q_sw = stepsize
@@ -107,6 +113,9 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
 
 
     Delta_t = 50e-3 * sfs
+=======
+    Delta_t = 50*10**-3 * sfs
+>>>>>>> Stashed changes
     D1 = sigma1**2 / (2 * Delta_t)
     D2 = sigma2**2 / (2 * Delta_t)
 
@@ -132,8 +141,13 @@ def double_rayleigh(path,p0,sfs=10,bins=40,minlike=0.8,percentile=99,method="MCM
         plt.ylabel("PDF")
         plt.title("2 Rayleigh fit")
         plt.show()
+<<<<<<< Updated upstream
     
     if method=="MCMC":
             return [sigma1, sigma2, weight, D1, D2], [sigma1_err, sigma2_err, weight_err,D1_err, D2_err]
     elif method=="MLE":
             return [sigma1, sigma2, weight, D1, D2], [None, None, None, None, None]
+=======
+
+    return sigma1, sigma2, weight, D1, D2
+>>>>>>> Stashed changes
